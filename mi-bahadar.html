@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מי בחדר?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800;900&family=Assistant:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --stage:    #0E1326;
+  --stage-2:  #171F3D;
+  --spot:     #F4A23C;
+  --spot-glow:#FFD089;
+  --link:     #9D8CFF;
+  --ink:      #F5F3EC;
+  --ink-soft: #9AA2BD;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: 'Assistant', sans-serif;
+}
+
+/* ── Stage Wrapper ── */
+#stage-wrap {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  background: var(--stage);
+  overflow: hidden;
+  transform-origin: top left;
+}
+
+/* ── Screens ── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.screen.active { display: flex; }
+
+/* ══════════════════════════════════════
+   TITLE SCREEN
+══════════════════════════════════════ */
+#screen-title {
+  flex-direction: column;
+  text-align: center;
+  gap: 32px;
+}
+
+.title-glow {
+  position: absolute;
+  width: 800px; height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244,162,60,0.18) 0%, rgba(244,162,60,0.06) 45%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.title-main {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: 180px;
+  color: var(--ink);
+  line-height: 1;
+  animation: titleIn 1s ease both;
+  position: relative;
+  text-shadow: 0 0 80px rgba(244,162,60,0.5);
+}
+
+.title-sub {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 600;
+  font-size: 36px;
+  color: var(--ink-soft);
+  letter-spacing: 2px;
+  animation: softIn 1s ease 0.3s both;
+  position: relative;
+}
+
+.title-hint {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--ink-soft);
+  opacity: 0.6;
+  animation: softIn 1s ease 0.7s both;
+  position: relative;
+  margin-top: 24px;
+}
+
+/* ══════════════════════════════════════
+   GAME SCREEN
+══════════════════════════════════════ */
+#screen-game {
+  flex-direction: column;
+}
+
+/* Progress */
+#progress {
+  position: absolute;
+  top: 48px;
+  left: 60px;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 36px;
+  color: var(--ink-soft);
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+
+/* Center scrim */
+.center-scrim {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px; height: 600px;
+  background: radial-gradient(ellipse, rgba(14,19,38,0.95) 40%, transparent 80%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Fact area */
+#fact-area {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 860px;
+  text-align: center;
+  z-index: 10;
+}
+
+#fact-label {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--spot);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+#fact-main {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 72px;
+  line-height: 1.25;
+  color: var(--ink);
+  animation: softIn 0.5s ease both;
+}
+
+#hint-area {
+  margin-top: 36px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+#hint-area.visible { opacity: 1; }
+
+#hint-label {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--spot-glow);
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+
+#hint-text {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 500;
+  font-size: 44px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* Connection callout */
+#connection-label {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  text-align: center;
+  z-index: 10;
+  display: none;
+}
+#connection-label.visible { display: block; }
+
+#connection-text {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 58px;
+  line-height: 1.35;
+  color: var(--link);
+  animation: softIn 0.6s ease both;
+}
+
+/* ── Name Ring ── */
+#name-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.name-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  transition: opacity 0.5s ease, transform 0.4s ease;
+}
+
+.name-node .node-name {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 38px;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: color 0.4s ease, text-shadow 0.4s ease, font-size 0.4s ease;
+}
+
+.name-node.quiet { opacity: 0.25; }
+.name-node.quiet .node-name { animation: breathe 3s ease-in-out infinite; }
+
+.name-node.revealed .node-name {
+  color: var(--ink-soft);
+  opacity: 0.6;
+}
+
+.name-node.active .node-name {
+  font-size: 56px;
+  color: var(--spot);
+  text-shadow: 0 0 40px rgba(244,162,60,0.8), 0 0 80px rgba(244,162,60,0.4);
+}
+
+.name-node.connected .node-name {
+  color: var(--link);
+  text-shadow: 0 0 30px rgba(157,140,255,0.6);
+}
+
+/* ── Spotlight ── */
+#spotlight {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,208,137,0.35) 0%, rgba(244,162,60,0.18) 35%, rgba(244,162,60,0.06) 60%, transparent 75%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: left 0.7s cubic-bezier(0.4,0,0.2,1), top 0.7s cubic-bezier(0.4,0,0.2,1), opacity 0.5s ease, width 0.5s ease, height 0.5s ease;
+}
+#spotlight.landed {
+  width: 600px;
+  height: 600px;
+}
+
+/* ── SVG Lines ── */
+#lines-svg {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.conn-line {
+  stroke: var(--link);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.conn-line.draw {
+  opacity: 0.7;
+  animation: drawLine 0.8s ease forwards;
+}
+
+/* Burst lines */
+.burst-line {
+  stroke: var(--spot);
+  stroke-width: 2;
+  fill: none;
+  opacity: 0;
+}
+.burst-line.animate {
+  animation: burstFade 0.8s ease forwards;
+}
+
+/* ══════════════════════════════════════
+   FINALE SCREEN
+══════════════════════════════════════ */
+#screen-finale {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#finale-title {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: 96px;
+  color: var(--ink);
+  text-align: center;
+  z-index: 10;
+  text-shadow: 0 0 60px rgba(157,140,255,0.5);
+  animation: softIn 1s ease both;
+}
+
+/* ── Chrome Bar ── */
+#chrome {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  background: linear-gradient(transparent, rgba(14,19,38,0.9));
+  z-index: 100;
+  padding: 0 60px;
+  transition: opacity 0.5s ease;
+}
+#chrome.hidden { opacity: 0; pointer-events: none; }
+
+.chrome-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--ink);
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  line-height: 1;
+}
+.chrome-btn:hover { background: rgba(255,255,255,0.16); transform: scale(1.05); }
+.chrome-btn:active { transform: scale(0.95); }
+
+#step-info {
+  font-family: 'Assistant', sans-serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--ink-soft);
+  min-width: 280px;
+  text-align: center;
+}
+
+.dot-track {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: background 0.3s;
+}
+.dot.done { background: var(--ink-soft); }
+.dot.current { background: var(--spot); width: 12px; height: 12px; }
+
+#btn-replay {
+  display: none;
+  background: rgba(244,162,60,0.15);
+  border-color: rgba(244,162,60,0.4);
+}
+#btn-replay.visible { display: flex; }
+
+/* ══════════════════════════════════════
+   KEYFRAMES
+══════════════════════════════════════ */
+@keyframes titleIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes softIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.025); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+  50%       { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes burstFade {
+  0%   { opacity: 0.9; stroke-dashoffset: 0; }
+  100% { opacity: 0;   stroke-dashoffset: -120; }
+}
+
+@keyframes nodeReveal {
+  0%   { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(0.95); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #spotlight { transition: opacity 0.3s ease; }
+  .conn-line.draw { animation: none; stroke-dashoffset: 0; }
+  .burst-line.animate { animation: none; opacity: 0; }
+  @keyframes breathe { from, to { transform: scale(1); } }
+  @keyframes pulse { from, to { } }
+}
+</style>
+</head>
+<body>
+
+<div id="stage-wrap">
+<div id="stage">
+
+  <!-- ── TITLE SCREEN ── -->
+  <div id="screen-title" class="screen active">
+    <div class="title-glow"></div>
+    <div class="title-main">מי בחדר?</div>
+    <div class="title-sub">סדנת היכרות · חטיבת תנועה</div>
+    <div class="title-hint">רווח להתחלה</div>
+  </div>
+
+  <!-- ── GAME SCREEN ── -->
+  <div id="screen-game" class="screen">
+
+    <!-- Progress -->
+    <div id="progress">01/10</div>
+
+    <!-- Name ring -->
+    <div id="name-ring"></div>
+
+    <!-- Spotlight -->
+    <div id="spotlight"></div>
+
+    <!-- SVG lines layer -->
+    <svg id="lines-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <!-- Center scrim -->
+    <div class="center-scrim"></div>
+
+    <!-- Fact display -->
+    <div id="fact-area">
+      <div id="fact-label">החדר מנחש</div>
+      <div id="fact-main"></div>
+      <div id="hint-area">
+        <div id="hint-label">רמז</div>
+        <div id="hint-text"></div>
+      </div>
+    </div>
+
+    <!-- Connection callout (shown during connections step) -->
+    <div id="connection-label">
+      <div id="connection-text"></div>
+    </div>
+
+  </div>
+
+  <!-- ── FINALE SCREEN ── -->
+  <div id="screen-finale" class="screen">
+    <!-- Name ring cloned via JS -->
+    <div id="finale-name-ring"></div>
+    <svg id="finale-lines-svg" style="position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none;z-index:3;" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="finale-title">כולנו כבר מחוברים</div>
+  </div>
+
+  <!-- ── CHROME ── -->
+  <div id="chrome">
+    <button class="chrome-btn" id="btn-back" title="אחורה">‹</button>
+    <div id="step-info">
+      <div id="step-label">כותרת</div>
+      <div class="dot-track" id="dot-track"></div>
+    </div>
+    <button class="chrome-btn" id="btn-forward" title="קדימה">›</button>
+    <button class="chrome-btn" id="btn-replay" title="חזור">↺</button>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════════════════ */
+const PEOPLE = [
+  {
+    id: "asif", name: "אסיף פרץ",
+    facts: [
+      "ידעתי לקרוא לפני שידעתי לדבר",
+      "יש לי 20 דודים"
+    ],
+    riddleIndex: 0, hintIndex: 1, groups: []
+  },
+  {
+    id: "tzachi", name: "צחי מרציאנו",
+    facts: [
+      "בעל ניסיון של כ-15 שנים בעולם הקולינריה והמסעדנות מגיל 16 (למדתי בתדמור בית ספר לבישול)",
+      "הייתי סו שף במסעדה במצטבר 10 שנים, שם הכרתי את אשתי"
+    ],
+    riddleIndex: 0, hintIndex: 1, groups: []
+  },
+  {
+    id: "bar", name: "בר חנינה",
+    facts: [
+      "שיחקתי כדורסל וכדורשת במשך שנים",
+      "יש לי גמישות יתר בברכיים"
+    ],
+    riddleIndex: 0, hintIndex: 1, groups: ["body"]
+  },
+  {
+    id: "mor", name: "מור מסס בן אהרן",
+    facts: [
+      "פעם רקדתי בלט והיפ הופ",
+      "השתתפתי בתור מנטורית בתחרות רובוטיקה עולמית של ארגון FIRST"
+    ],
+    riddleIndex: 1, hintIndex: 0, groups: []
+  },
+  {
+    id: "lena", name: "לנה רימן",
+    facts: [
+      "כאשר עליתי לארץ בגיל 25 עבדתי ברפת בצוות עם בדואים (יותר בתור רועה אבל גם כחולבת)",
+      "מגדלת שתי בנות על הרצף בתפקוד גבוה"
+    ],
+    riddleIndex: 1, hintIndex: 0, groups: ["aliyah", "nature"]
+  },
+  {
+    id: "murad", name: "מוראד רושרוש",
+    facts: [
+      "אני מאמן קראטה",
+      "אני יכול להתווכח עם עצמי, להפסיד בוויכוח ועדיין לא להשתכנע (עקשן מאוד)"
+    ],
+    riddleIndex: 0, hintIndex: 1, groups: ["karate", "combat", "stubborn"]
+  },
+  {
+    id: "nir", name: "ניר משולם",
+    facts: [
+      "אני התאמנתי מגיל 6 עד גיל 20 בקארטה ואני בעל חגורה שחורה בקארטה",
+      "פרקתי את הכתף 6 פעמים"
+    ],
+    riddleIndex: 1, hintIndex: 0, groups: ["karate", "combat", "body"]
+  },
+  {
+    id: "yaniv", name: "יניב פנתהון",
+    facts: [
+      "אוהב צלילה חופשית ומחזיק נשימה לזמן ארוך מהרגיל",
+      "מסוגל להיתקע על חידה או בעיה שעות עד שאני פותר אותה"
+    ],
+    riddleIndex: 1, hintIndex: 0, groups: ["body", "stubborn"]
+  },
+  {
+    id: "ksenia", name: "קסניה יעקוב",
+    facts: [
+      "אני מתאמנת באגרוף",
+      "אני מאוד אוהבת בעלי חיים"
+    ],
+    riddleIndex: 0, hintIndex: 1, groups: ["combat", "nature"]
+  },
+  {
+    id: "laota", name: "לאוטה אברהם",
+    facts: [
+      "הייתי מדריכה בחברה להגנת הטבע",
+      "בגיל 3 הלכתי לאיבוד באתיופיה (לפני העלייה לארץ)"
+    ],
+    riddleIndex: 1, hintIndex: 0, groups: ["nature", "aliyah"]
+  }
+];
+
+const GROUPS = {
+  karate:  { label: "קראטה",               members: ["murad", "nir"] },
+  combat:  { label: "עולם הלחימה",          members: ["murad", "nir", "ksenia"] },
+  aliyah:  { label: "מסע עלייה",            members: ["lena", "laota"] },
+  nature:  { label: "טבע ובעלי חיים",       members: ["lena", "ksenia", "laota"] },
+  body:    { label: "גוף עם תכונה מיוחדת",  members: ["bar", "yaniv", "nir"] },
+  stubborn:{ label: "עקשנות ודבקות",        members: ["yaniv", "murad"] }
+};
+
+const revealOrder = ["asif","tzachi","bar","mor","lena","murad","nir","yaniv","ksenia","laota"];
+
+/* Ring positions (1920×1080) */
+const RING_POS = [
+  { x: 960,  y: 210 },   // 0 asif
+  { x: 1372, y: 273 },   // 1 tzachi
+  { x: 1626, y: 438 },   // 2 bar
+  { x: 1626, y: 642 },   // 3 mor
+  { x: 1372, y: 807 },   // 4 lena
+  { x: 960,  y: 870 },   // 5 murad
+  { x: 548,  y: 807 },   // 6 nir
+  { x: 294,  y: 642 },   // 7 yaniv
+  { x: 294,  y: 438 },   // 8 ksenia
+  { x: 548,  y: 273 },   // 9 laota
+];
+
+/* Finale connection pairs (deduped) */
+const FINALE_PAIRS = [[5,6],[5,8],[6,8],[4,9],[4,8],[8,9],[2,7],[2,6],[6,7],[7,5]];
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let screen = 'title';   // 'title' | 'game' | 'finale'
+let roundIndex = 0;     // 0-9
+let step = 'riddle';    // 'riddle' | 'hint' | 'reveal' | 'connections'
+
+const revealedIds = new Set();
+const spent = new Set();
+
+// Callouts computed on reveal
+let pendingCallouts = [];   // [{text, fromIdx, toIndices:[]}]
+
+/* Chrome hide timer */
+let chromeTimer = null;
+
+/* ═══════════════════════════════════════════════════════
+   DOM REFS
+═══════════════════════════════════════════════════════ */
+const stageEl      = document.getElementById('stage');
+const nameRingEl   = document.getElementById('name-ring');
+const spotlightEl  = document.getElementById('spotlight');
+const linesSvg     = document.getElementById('lines-svg');
+const factAreaEl   = document.getElementById('fact-area');
+const factLabelEl  = document.getElementById('fact-label');
+const factMainEl   = document.getElementById('fact-main');
+const hintAreaEl   = document.getElementById('hint-area');
+const hintTextEl   = document.getElementById('hint-text');
+const connLabelEl  = document.getElementById('connection-label');
+const connTextEl   = document.getElementById('connection-text');
+const progressEl   = document.getElementById('progress');
+const chromeEl     = document.getElementById('chrome');
+const stepLabelEl  = document.getElementById('step-label');
+const dotTrackEl   = document.getElementById('dot-track');
+const btnBack      = document.getElementById('btn-back');
+const btnForward   = document.getElementById('btn-forward');
+const btnReplay    = document.getElementById('btn-replay');
+const finaleNameRing = document.getElementById('finale-name-ring');
+const finaleLinesSvg = document.getElementById('finale-lines-svg');
+
+/* ═══════════════════════════════════════════════════════
+   SCALE STAGE
+═══════════════════════════════════════════════════════ */
+function scaleStage() {
+  const sw = window.innerWidth, sh = window.innerHeight;
+  const ratio = Math.min(sw / 1920, sh / 1080);
+  const scaledW = 1920 * ratio, scaledH = 1080 * ratio;
+  const ox = (sw - scaledW) / 2, oy = (sh - scaledH) / 2;
+  stageEl.style.transform = `translate(${ox}px, ${oy}px) scale(${ratio})`;
+}
+window.addEventListener('resize', scaleStage);
+scaleStage();
+
+/* ═══════════════════════════════════════════════════════
+   BUILD NAME RING
+═══════════════════════════════════════════════════════ */
+const nodeEls = []; // indexed by ring position (same as revealOrder index)
+
+function buildNameRing() {
+  nameRingEl.innerHTML = '';
+  nodeEls.length = 0;
+  revealOrder.forEach((id, i) => {
+    const person = PEOPLE.find(p => p.id === id);
+    const pos = RING_POS[i];
+    const node = document.createElement('div');
+    node.className = 'name-node quiet';
+    node.dataset.id = id;
+    node.style.left = pos.x + 'px';
+    node.style.top  = pos.y + 'px';
+    node.innerHTML = `<span class="node-name">${person.name}</span>`;
+    nameRingEl.appendChild(node);
+    nodeEls.push(node);
+  });
+}
+
+function buildFinaleRing() {
+  finaleNameRing.innerHTML = '';
+  revealOrder.forEach((id, i) => {
+    const person = PEOPLE.find(p => p.id === id);
+    const pos = RING_POS[i];
+    const node = document.createElement('div');
+    node.className = 'name-node';
+    node.style.cssText = `position:absolute;transform:translate(-50%,-50%);left:${pos.x}px;top:${pos.y}px;text-align:center;`;
+    node.innerHTML = `<span class="node-name" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:38px;color:var(--ink);white-space:nowrap;">${person.name}</span>`;
+    finaleNameRing.appendChild(node);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   SPOTLIGHT
+═══════════════════════════════════════════════════════ */
+function moveSpotlight(x, y, land = false) {
+  spotlightEl.style.left = x + 'px';
+  spotlightEl.style.top  = y + 'px';
+  spotlightEl.style.opacity = '1';
+  if (land) {
+    spotlightEl.classList.add('landed');
+  } else {
+    spotlightEl.classList.remove('landed');
+  }
+}
+
+function hideSpotlight() {
+  spotlightEl.style.opacity = '0';
+  spotlightEl.classList.remove('landed');
+}
+
+/* ═══════════════════════════════════════════════════════
+   BURST LINES (reveal animation)
+═══════════════════════════════════════════════════════ */
+function drawBurst(cx, cy) {
+  // Remove old bursts
+  linesSvg.querySelectorAll('.burst-line').forEach(el => el.remove());
+  const count = 12;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const len = 80 + Math.random() * 60;
+    const x2 = cx + Math.cos(angle) * len;
+    const y2 = cy + Math.sin(angle) * len;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke-dasharray', len);
+    line.setAttribute('stroke-dashoffset', '0');
+    line.classList.add('burst-line');
+    linesSvg.appendChild(line);
+    // Trigger animation
+    requestAnimationFrame(() => line.classList.add('animate'));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONNECTION LINES
+═══════════════════════════════════════════════════════ */
+function makePathD(x1, y1, x2, y2) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  // Arc toward center
+  const cx2 = 960, cy2 = 540;
+  const ctrlX = mx + (cx2 - mx) * 0.25;
+  const ctrlY = my + (cy2 - my) * 0.25;
+  return `M${x1},${y1} Q${ctrlX},${ctrlY} ${x2},${y2}`;
+}
+
+function drawConnectionLines(fromIdx, toIndices) {
+  // Remove old connection lines
+  linesSvg.querySelectorAll('.conn-line').forEach(el => el.remove());
+
+  const fromPos = RING_POS[fromIdx];
+  toIndices.forEach((toIdx, i) => {
+    const toPos = RING_POS[toIdx];
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', makePathD(fromPos.x, fromPos.y, toPos.x, toPos.y));
+    path.setAttribute('stroke-dasharray', '1000');
+    path.setAttribute('stroke-dashoffset', '1000');
+    path.classList.add('conn-line');
+    linesSvg.appendChild(path);
+    setTimeout(() => path.classList.add('draw'), i * 150 + 100);
+  });
+}
+
+function clearConnectionLines() {
+  linesSvg.querySelectorAll('.conn-line').forEach(el => el.remove());
+  linesSvg.querySelectorAll('.burst-line').forEach(el => el.remove());
+}
+
+/* ═══════════════════════════════════════════════════════
+   NODE STATE HELPERS
+═══════════════════════════════════════════════════════ */
+function setAllNodesQuiet() {
+  nodeEls.forEach(n => {
+    n.className = 'name-node quiet';
+  });
+}
+
+function applyNodeStates(activeIdx) {
+  nodeEls.forEach((n, i) => {
+    const id = revealOrder[i];
+    n.className = 'name-node';
+    if (i === activeIdx) {
+      n.classList.add('active');
+    } else if (revealedIds.has(id)) {
+      n.classList.add('revealed');
+    } else {
+      n.classList.add('quiet');
+    }
+  });
+}
+
+function applyConnectionHighlights(activeIdx, toIndices) {
+  applyNodeStates(activeIdx);
+  toIndices.forEach(idx => {
+    nodeEls[idx].classList.remove('revealed');
+    nodeEls[idx].classList.add('connected');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   COMPUTE CALLOUTS
+═══════════════════════════════════════════════════════ */
+function computeCallouts(personId, personGroups) {
+  // First, gather every group that triggers (>=2 revealed members) at this reveal,
+  // with the set of revealed members it would connect.
+  const triggering = [];
+  personGroups.forEach(gId => {
+    const group = GROUPS[gId];
+    if (!group) return;
+    const revealedMembers = group.members.filter(m => revealedIds.has(m));
+    if (revealedMembers.length >= 2) {
+      triggering.push({ gId, group, set: new Set(revealedMembers), members: revealedMembers });
+    }
+  });
+
+  // Drop a group that connects the EXACT same set of people as an earlier
+  // triggering group at this reveal (e.g. קראטה and עולם הלחימה both connect
+  // {מוראד, ניר} at ניר → keep only קראטה). Groups whose member sets merely
+  // overlap but are not identical (מסע עלייה {לנה,לאוטה} vs טבע {לנה,קסניה,לאוטה}
+  // at לאוטה) both fire — matching the brief's expected callout flow.
+  const sameSet = (a, b) => a.size === b.size && [...a].every(m => b.has(m));
+  const kept = triggering.filter((t, i) =>
+    !triggering.some((o, j) => j < i && sameSet(o.set, t.set))
+  );
+
+  const callouts = [];
+  kept.forEach(({ group, members }) => {
+    const others = members.filter(m => m !== personId);
+    if (others.length === 0) return;
+    const otherNames = others.map(m => PEOPLE.find(p => p.id === m).name);
+    const currentName = PEOPLE.find(p => p.id === personId).name;
+    const othersStr = otherNames.join(' ו');
+    const text = `גם ${currentName}, כמו ${othersStr}, ${group.label}`;
+    const toIndices = others.map(m => revealOrder.indexOf(m));
+    callouts.push({ text, fromIdx: revealOrder.indexOf(personId), toIndices });
+  });
+  return callouts;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN SWITCHING
+═══════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  screen = id;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DOT PROGRESS
+═══════════════════════════════════════════════════════ */
+const STEPS_PER_PERSON = ['riddle','hint','reveal','connections'];
+
+function updateDots() {
+  dotTrackEl.innerHTML = '';
+  // 4 dots per person round
+  const stepOrder = ['riddle','hint','reveal','connections'];
+  stepOrder.forEach(s => {
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    if (s === step) dot.classList.add('current');
+    else if (stepOrder.indexOf(s) < stepOrder.indexOf(step)) dot.classList.add('done');
+    dotTrackEl.appendChild(dot);
+  });
+}
+
+function updateChrome() {
+  if (screen === 'title') {
+    stepLabelEl.textContent = 'כותרת';
+    dotTrackEl.innerHTML = '';
+    btnReplay.classList.remove('visible');
+  } else if (screen === 'game') {
+    const labels = { riddle: 'חידה', hint: 'רמז', reveal: 'גילוי', connections: 'קשרים' };
+    stepLabelEl.textContent = labels[step] || '';
+    updateDots();
+    btnReplay.classList.toggle('visible', step === 'reveal' || step === 'connections');
+  } else if (screen === 'finale') {
+    stepLabelEl.textContent = 'סיום';
+    dotTrackEl.innerHTML = '';
+    btnReplay.classList.add('visible');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER STEPS
+═══════════════════════════════════════════════════════ */
+function renderCurrent() {
+  if (screen === 'title') {
+    updateChrome();
+    return;
+  }
+  if (screen === 'finale') {
+    renderFinale();
+    updateChrome();
+    return;
+  }
+
+  // Game screen
+  const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+  const ringIdx = roundIndex;
+  const numStr = String(roundIndex + 1).padStart(2, '0') + '/10';
+  progressEl.textContent = numStr;
+
+  // Decide riddle/hint facts
+  let riddleFact = person.facts[person.riddleIndex];
+  let hintFact   = person.facts[person.hintIndex];
+
+  // Spoiler guard: if person's groups are ALL spent, skip riddle → go to reveal
+  // (handled in advance() but guard display here too)
+
+  if (step === 'riddle') {
+    // Show fact-area, hide connections
+    factAreaEl.style.display = '';
+    connLabelEl.classList.remove('visible');
+    clearConnectionLines();
+    hintAreaEl.classList.remove('visible');
+
+    factLabelEl.textContent = 'החדר מנחש';
+    factMainEl.textContent = riddleFact;
+    factMainEl.style.animation = 'none';
+    void factMainEl.offsetWidth;
+    factMainEl.style.animation = '';
+
+    setAllNodesQuiet();
+    hideSpotlight();
+
+  } else if (step === 'hint') {
+    factAreaEl.style.display = '';
+    connLabelEl.classList.remove('visible');
+    clearConnectionLines();
+
+    factLabelEl.textContent = 'החדר מנחש';
+    factMainEl.textContent = riddleFact;
+    hintAreaEl.classList.add('visible');
+    hintTextEl.textContent = hintFact;
+
+    setAllNodesQuiet();
+    hideSpotlight();
+
+  } else if (step === 'reveal') {
+    factAreaEl.style.display = 'none';
+    connLabelEl.classList.remove('visible');
+    clearConnectionLines();
+
+    applyNodeStates(ringIdx);
+    const pos = RING_POS[ringIdx];
+    moveSpotlight(pos.x, pos.y, true);
+    setTimeout(() => drawBurst(pos.x, pos.y), 400);
+
+  } else if (step === 'connections') {
+    factAreaEl.style.display = 'none';
+    connLabelEl.classList.add('visible');
+
+    if (pendingCallouts.length > 0) {
+      // Show all callout texts combined
+      const allText = pendingCallouts.map(c => c.text).join('\n');
+      connTextEl.innerHTML = pendingCallouts.map(c => `<div style="margin-bottom:16px;">${c.text}</div>`).join('');
+      connTextEl.style.animation = 'none';
+      void connTextEl.offsetWidth;
+      connTextEl.style.animation = '';
+
+      // Highlight all connected nodes
+      const allToIndices = [...new Set(pendingCallouts.flatMap(c => c.toIndices))];
+      applyConnectionHighlights(ringIdx, allToIndices);
+
+      // Draw lines from current to all connected
+      const pos = RING_POS[ringIdx];
+      moveSpotlight(pos.x, pos.y, true);
+      drawConnectionLines(ringIdx, allToIndices);
+    } else {
+      // No callouts — this step shouldn't exist, but handle gracefully
+      connTextEl.textContent = '';
+    }
+  }
+
+  updateChrome();
+}
+
+/* ═══════════════════════════════════════════════════════
+   FINALE
+═══════════════════════════════════════════════════════ */
+function renderFinale() {
+  buildFinaleRing();
+  finaleLinesSvg.innerHTML = '';
+
+  FINALE_PAIRS.forEach(([a, b], i) => {
+    const pa = RING_POS[a], pb = RING_POS[b];
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', makePathD(pa.x, pa.y, pb.x, pb.y));
+    path.setAttribute('stroke', 'var(--link)');
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-dasharray', '1000');
+    path.setAttribute('stroke-dashoffset', '1000');
+    path.style.opacity = '0';
+    finaleLinesSvg.appendChild(path);
+    setTimeout(() => {
+      path.style.opacity = '0.6';
+      path.style.transition = 'stroke-dashoffset 0.9s ease';
+      path.style.strokeDashoffset = '0';
+    }, i * 120 + 300);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════ */
+function advance() {
+  if (screen === 'title') {
+    showScreen('game');
+    buildNameRing();
+    roundIndex = 0;
+    step = 'riddle';
+    revealedIds.clear();
+    spent.clear();
+    pendingCallouts = [];
+    renderCurrent();
+    return;
+  }
+
+  if (screen === 'finale') return; // nothing past finale
+
+  if (screen === 'game') {
+    const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+
+    if (step === 'riddle') {
+      step = 'hint';
+
+    } else if (step === 'hint') {
+      step = 'reveal';
+      // Compute reveal
+      revealedIds.add(person.id);
+      pendingCallouts = computeCallouts(person.id, person.groups);
+      // Add groups to spent
+      person.groups.forEach(g => spent.add(g));
+
+    } else if (step === 'reveal') {
+      if (pendingCallouts.length > 0) {
+        step = 'connections';
+      } else {
+        // Next person or finale
+        nextPerson();
+        return;
+      }
+
+    } else if (step === 'connections') {
+      nextPerson();
+      return;
+    }
+
+    renderCurrent();
+  }
+}
+
+function nextPerson() {
+  clearConnectionLines();
+  roundIndex++;
+  if (roundIndex >= revealOrder.length) {
+    showScreen('finale');
+    renderCurrent();
+  } else {
+    step = 'riddle';
+    // Spoiler guard: if person's groups are all spent → skip to reveal directly
+    const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+    if (person.groups.length > 0 && person.groups.every(g => spent.has(g))) {
+      // Skip riddle/hint, go straight to reveal
+      step = 'reveal';
+      revealedIds.add(person.id);
+      pendingCallouts = computeCallouts(person.id, person.groups);
+      person.groups.forEach(g => spent.add(g));
+    }
+    renderCurrent();
+  }
+}
+
+function retreat() {
+  if (screen === 'title') return;
+
+  if (screen === 'finale') {
+    // Go back to last connections or reveal of last person
+    showScreen('game');
+    roundIndex = revealOrder.length - 1;
+    const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+    if (pendingCallouts.length > 0) {
+      step = 'connections';
+    } else {
+      step = 'reveal';
+    }
+    renderCurrent();
+    return;
+  }
+
+  if (screen === 'game') {
+    if (step === 'riddle') {
+      if (roundIndex === 0) {
+        // Back to title
+        showScreen('title');
+        renderCurrent();
+      } else {
+        // Previous person's last step
+        roundIndex--;
+        clearConnectionLines();
+        const prevPerson = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+        // Recompute previous person's callouts
+        // We need to re-run state from scratch — simplified: go to reveal of prev person
+        // (We don't track full history, so go to reveal)
+        step = 'reveal';
+        renderCurrent();
+      }
+    } else if (step === 'hint') {
+      step = 'riddle';
+      hintAreaEl.classList.remove('visible');
+      renderCurrent();
+    } else if (step === 'reveal') {
+      // Un-reveal this person
+      const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
+      revealedIds.delete(person.id);
+      pendingCallouts = [];
+      step = 'hint';
+      renderCurrent();
+    } else if (step === 'connections') {
+      step = 'reveal';
+      clearConnectionLines();
+      renderCurrent();
+    }
+  }
+}
+
+function replayStep() {
+  if (screen === 'game' && (step === 'reveal' || step === 'connections')) {
+    clearConnectionLines();
+    renderCurrent();
+  } else if (screen === 'finale') {
+    renderFinale();
+  }
+}
+
+function resetToTitle() {
+  clearConnectionLines();
+  revealedIds.clear();
+  spent.clear();
+  pendingCallouts = [];
+  roundIndex = 0;
+  step = 'riddle';
+  hideSpotlight();
+  showScreen('title');
+  renderCurrent();
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHROME AUTO-HIDE
+═══════════════════════════════════════════════════════ */
+function showChrome() {
+  chromeEl.classList.remove('hidden');
+  clearTimeout(chromeTimer);
+  chromeTimer = setTimeout(() => chromeEl.classList.add('hidden'), 3000);
+}
+
+document.addEventListener('mousemove', showChrome);
+
+/* ═══════════════════════════════════════════════════════
+   INPUT
+═══════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  showChrome();
+  switch (e.key) {
+    case ' ':
+    case 'ArrowLeft':
+    case 'ArrowDown':
+      e.preventDefault();
+      advance();
+      break;
+    case 'ArrowRight':
+    case 'ArrowUp':
+      e.preventDefault();
+      retreat();
+      break;
+    case 'Home':
+      e.preventDefault();
+      resetToTitle();
+      break;
+  }
+});
+
+btnForward.addEventListener('click', () => { showChrome(); advance(); });
+btnBack.addEventListener('click',    () => { showChrome(); retreat(); });
+btnReplay.addEventListener('click',  () => { showChrome(); replayStep(); });
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+showChrome();
+renderCurrent();
+</script>
+</body>
+</html>
