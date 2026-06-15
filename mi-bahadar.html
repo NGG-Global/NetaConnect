@@ -626,7 +626,7 @@ const PEOPLE = [
       "שיחקתי כדורסל וכדורשת במשך שנים",
       "יש לי גמישות יתר בברכיים"
     ],
-    riddleIndex: 0, hintIndex: 1, groups: ["body"]
+    riddleIndex: 0, hintIndex: 1, groups: []
   },
   {
     id: "mor", name: "מור מסס בן אהרן",
@@ -658,7 +658,7 @@ const PEOPLE = [
       "אני התאמנתי מגיל 6 עד גיל 20 בקארטה ואני בעל חגורה שחורה בקארטה",
       "פרקתי את הכתף 6 פעמים"
     ],
-    riddleIndex: 1, hintIndex: 0, groups: ["karate", "combat", "body"]
+    riddleIndex: 1, hintIndex: 0, groups: ["karate", "combat"]
   },
   {
     id: "yaniv", name: "יניב פנתהון",
@@ -666,7 +666,7 @@ const PEOPLE = [
       "אוהב צלילה חופשית ומחזיק נשימה לזמן ארוך מהרגיל",
       "מסוגל להיתקע על חידה או בעיה שעות עד שאני פותר אותה"
     ],
-    riddleIndex: 1, hintIndex: 0, groups: ["body", "stubborn"]
+    riddleIndex: 1, hintIndex: 0, groups: ["stubborn"]
   },
   {
     id: "ksenia", name: "קסניה יעקוב",
@@ -691,7 +691,6 @@ const GROUPS = {
   combat:  { label: "עולם הלחימה",          members: ["murad", "nir", "ksenia"] },
   aliyah:  { label: "מסע עלייה",            members: ["lena", "laota"] },
   nature:  { label: "טבע ובעלי חיים",       members: ["lena", "ksenia", "laota"] },
-  body:    { label: "גוף שמפתיע",            members: ["bar", "yaniv", "nir"] },
   stubborn:{ label: "עקשנות ודבקות",        members: ["yaniv", "murad"] }
 };
 
@@ -712,7 +711,7 @@ const RING_POS = [
 ];
 
 /* Finale connection pairs (deduped) */
-const FINALE_PAIRS = [[5,6],[5,8],[6,8],[4,9],[4,8],[8,9],[2,7],[2,6],[6,7],[7,5]];
+const FINALE_PAIRS = [[5,6],[5,8],[6,8],[4,9],[4,8],[8,9],[7,5]];
 
 /* ═══════════════════════════════════════════════════════
    STATE
