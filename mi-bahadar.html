@@ -248,11 +248,34 @@ html, body {
   font-size: 56px;
   color: var(--spot);
   text-shadow: 0 0 40px rgba(244,162,60,0.8), 0 0 80px rgba(244,162,60,0.4);
+  animation: nameLand 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+/* one gentle anticipation pulse across the quiet ring before the sweep */
+.name-node.anticipate .node-name {
+  animation: anticipatePulse 0.5s ease-in-out;
 }
 
 .name-node.connected .node-name {
   color: var(--link);
   text-shadow: 0 0 30px rgba(157,140,255,0.6);
+}
+
+/* ── Ambient dust ── */
+#ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+#ambient i {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  opacity: 0.12;
+  animation: drift 14s ease-in-out infinite alternate;
 }
 
 /* ── Spotlight ── */
@@ -266,7 +289,13 @@ html, body {
   pointer-events: none;
   z-index: 1;
   opacity: 0;
-  transition: left 0.7s cubic-bezier(0.4,0,0.2,1), top 0.7s cubic-bezier(0.4,0,0.2,1), opacity 0.5s ease, width 0.5s ease, height 0.5s ease;
+  /* momentum / overshoot easing — the "Movement" signature */
+  transition: left 0.78s cubic-bezier(0.34,1.30,0.5,1), top 0.78s cubic-bezier(0.34,1.30,0.5,1), opacity 0.5s ease, width 0.5s ease, height 0.5s ease;
+}
+#spotlight.searching {
+  width: 360px;
+  height: 360px;
+  animation: spotIdle 4s ease-in-out infinite;
 }
 #spotlight.landed {
   width: 600px;
@@ -435,11 +464,39 @@ html, body {
   100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
+/* the name grows with momentum as the light lands on it */
+@keyframes nameLand {
+  0%   { transform: scale(0.7); }
+  100% { transform: scale(1); }
+}
+
+/* a single beat of tension across the ring */
+@keyframes anticipatePulse {
+  0%, 100% { transform: scale(1);    opacity: 0.25; }
+  50%      { transform: scale(1.06); opacity: 0.55; }
+}
+
+/* spotlight drifts gently while it "searches" the ring */
+@keyframes spotIdle {
+  0%, 100% { margin-left: -16px; margin-top: -8px; }
+  50%      { margin-left:  18px; margin-top: 10px; }
+}
+
+/* ambient "dust of movement" drifting in the dark stage */
+@keyframes drift {
+  from { transform: translate(0, 0);          opacity: 0.05; }
+  to   { transform: translate(var(--dx), var(--dy)); opacity: 0.22; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   #spotlight { transition: opacity 0.3s ease; }
   .conn-line.draw { animation: none; stroke-dashoffset: 0; }
   .burst-line.animate { animation: none; opacity: 0; }
+  #ambient i { animation: none; }
+  #spotlight.searching { animation: none; }
+  .name-node.active .node-name { animation: none; }
+  .name-node.anticipate .node-name { animation: none; }
   @keyframes breathe { from, to { transform: scale(1); } }
   @keyframes pulse { from, to { } }
 }
@@ -449,6 +506,9 @@ html, body {
 
 <div id="stage-wrap">
 <div id="stage">
+
+  <!-- ambient dust of movement -->
+  <div id="ambient"></div>
 
   <!-- ── TITLE SCREEN ── -->
   <div id="screen-title" class="screen active">
@@ -684,6 +744,25 @@ function scaleStage() {
 window.addEventListener('resize', scaleStage);
 scaleStage();
 
+const prefersReduced = () =>
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ═══════════════════════════════════════════════════════
+   AMBIENT DUST
+═══════════════════════════════════════════════════════ */
+(function buildAmbient() {
+  const amb = document.getElementById('ambient');
+  for (let i = 0; i < 28; i++) {
+    const dot = document.createElement('i');
+    dot.style.left = ((i * 73) % 100) + '%';
+    dot.style.top  = ((i * 157) % 100) + '%';
+    dot.style.setProperty('--dx', (((i % 5) - 2) * 18) + 'px');
+    dot.style.setProperty('--dy', (((i % 4) - 2) * 20) + 'px');
+    dot.style.animationDelay = ((i % 7) * 0.7) + 's';
+    amb.appendChild(dot);
+  }
+})();
+
 /* ═══════════════════════════════════════════════════════
    BUILD NAME RING
 ═══════════════════════════════════════════════════════ */
@@ -727,10 +806,54 @@ function moveSpotlight(x, y, land = false) {
   spotlightEl.style.top  = y + 'px';
   spotlightEl.style.opacity = '1';
   if (land) {
+    spotlightEl.classList.remove('searching');
     spotlightEl.classList.add('landed');
   } else {
     spotlightEl.classList.remove('landed');
   }
+}
+
+/* Track timers so a quick back/forward doesn't leave a half-played sequence. */
+let revealTimers = [];
+function clearRevealTimers() { revealTimers.forEach(clearTimeout); revealTimers = []; }
+
+/* The signature: a beat of tension, the light sweeps across the ring,
+   then lands on the right person who grows into the glow. */
+function playRevealSequence(activeIdx) {
+  clearRevealTimers();
+  const pos = RING_POS[activeIdx];
+
+  if (prefersReduced()) {
+    applyNodeStates(activeIdx);
+    moveSpotlight(pos.x, pos.y, true);
+    revealTimers.push(setTimeout(() => drawBurst(pos.x, pos.y), 200));
+    return;
+  }
+
+  // 1) anticipation — one gentle pulse across the still-quiet ring
+  setAllNodesQuiet();
+  nodeEls.forEach(n => { n.classList.remove('anticipate'); void n.offsetWidth; n.classList.add('anticipate'); });
+
+  // 2) the spotlight appears at the centre and "searches"
+  spotlightEl.classList.remove('landed');
+  spotlightEl.classList.add('searching');
+  spotlightEl.style.left = '960px';
+  spotlightEl.style.top  = '540px';
+  spotlightEl.style.opacity = '1';
+
+  // 3) it sweeps out to the person and lands (momentum easing on left/top)
+  revealTimers.push(setTimeout(() => {
+    nodeEls.forEach(n => n.classList.remove('anticipate'));
+    moveSpotlight(pos.x, pos.y, false);
+  }, 480));
+
+  // 4) on arrival: tighten the light, reveal the name, fire the burst
+  revealTimers.push(setTimeout(() => {
+    spotlightEl.classList.remove('searching');
+    spotlightEl.classList.add('landed');
+    applyNodeStates(activeIdx);
+    drawBurst(pos.x, pos.y);
+  }, 480 + 780));
 }
 
 function hideSpotlight() {
@@ -927,6 +1050,8 @@ function renderCurrent() {
   }
 
   // Game screen
+  // Cancel any in-flight reveal choreography before re-rendering a step.
+  if (step !== 'reveal') clearRevealTimers();
   const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
   const ringIdx = roundIndex;
   const numStr = String(roundIndex + 1).padStart(2, '0') + '/10';
@@ -973,10 +1098,7 @@ function renderCurrent() {
     connLabelEl.classList.remove('visible');
     clearConnectionLines();
 
-    applyNodeStates(ringIdx);
-    const pos = RING_POS[ringIdx];
-    moveSpotlight(pos.x, pos.y, true);
-    setTimeout(() => drawBurst(pos.x, pos.y), 400);
+    playRevealSequence(ringIdx);
 
   } else if (step === 'connections') {
     factAreaEl.style.display = 'none';
