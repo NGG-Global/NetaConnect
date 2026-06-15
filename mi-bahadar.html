@@ -1061,9 +1061,6 @@ function renderCurrent() {
   let riddleFact = person.facts[person.riddleIndex];
   let hintFact   = person.facts[person.hintIndex];
 
-  // Spoiler guard: if person's groups are ALL spent, skip riddle → go to reveal
-  // (handled in advance() but guard display here too)
-
   if (step === 'riddle') {
     // Show fact-area, hide connections
     factAreaEl.style.display = '';
@@ -1177,21 +1174,27 @@ function advance() {
     const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
 
     if (step === 'riddle') {
-      step = 'hint';
+      // Hint is shown only for people with no group connections.
+      // For grouped people the second fact surfaces in the connection callout.
+      if (person.groups.length === 0) {
+        step = 'hint';
+      } else {
+        step = 'reveal';
+        revealedIds.add(person.id);
+        pendingCallouts = computeCallouts(person.id, person.groups);
+        person.groups.forEach(g => spent.add(g));
+      }
 
     } else if (step === 'hint') {
       step = 'reveal';
-      // Compute reveal
       revealedIds.add(person.id);
       pendingCallouts = computeCallouts(person.id, person.groups);
-      // Add groups to spent
       person.groups.forEach(g => spent.add(g));
 
     } else if (step === 'reveal') {
       if (pendingCallouts.length > 0) {
         step = 'connections';
       } else {
-        // Next person or finale
         nextPerson();
         return;
       }
@@ -1212,16 +1215,8 @@ function nextPerson() {
     showScreen('finale');
     renderCurrent();
   } else {
+    // Everyone always gets a riddle — no skipping.
     step = 'riddle';
-    // Spoiler guard: if person's groups are all spent → skip to reveal directly
-    const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
-    if (person.groups.length > 0 && person.groups.every(g => spent.has(g))) {
-      // Skip riddle/hint, go straight to reveal
-      step = 'reveal';
-      revealedIds.add(person.id);
-      pendingCallouts = computeCallouts(person.id, person.groups);
-      person.groups.forEach(g => spent.add(g));
-    }
     renderCurrent();
   }
 }
@@ -1265,11 +1260,12 @@ function retreat() {
       hintAreaEl.classList.remove('visible');
       renderCurrent();
     } else if (step === 'reveal') {
-      // Un-reveal this person
       const person = PEOPLE.find(p => p.id === revealOrder[roundIndex]);
       revealedIds.delete(person.id);
+      person.groups.forEach(g => spent.delete(g));
       pendingCallouts = [];
-      step = 'hint';
+      // Go back to hint only for people who have a hint step (no groups)
+      step = person.groups.length === 0 ? 'hint' : 'riddle';
       renderCurrent();
     } else if (step === 'connections') {
       step = 'reveal';
