@@ -696,22 +696,35 @@ const GROUPS = {
 
 const revealOrder = ["asif","tzachi","bar","mor","lena","murad","nir","yaniv","ksenia","laota"];
 
-/* Ring positions (1920×1080) */
+/* Ring positions (1920×1080) — 10 slots evenly spaced on an ellipse */
 const RING_POS = [
-  { x: 960,  y: 210 },   // 0 asif
-  { x: 1372, y: 273 },   // 1 tzachi
-  { x: 1626, y: 438 },   // 2 bar
-  { x: 1626, y: 642 },   // 3 mor
-  { x: 1372, y: 807 },   // 4 lena
-  { x: 960,  y: 870 },   // 5 murad
-  { x: 548,  y: 807 },   // 6 nir
-  { x: 294,  y: 642 },   // 7 yaniv
-  { x: 294,  y: 438 },   // 8 ksenia
-  { x: 548,  y: 273 },   // 9 laota
+  { x: 960,  y: 210 },
+  { x: 1372, y: 273 },
+  { x: 1626, y: 438 },
+  { x: 1626, y: 642 },
+  { x: 1372, y: 807 },
+  { x: 960,  y: 870 },
+  { x: 548,  y: 807 },
+  { x: 294,  y: 642 },
+  { x: 294,  y: 438 },
+  { x: 548,  y: 273 },
 ];
 
-/* Finale connection pairs (deduped) */
-const FINALE_PAIRS = [[5,6],[5,8],[6,8],[4,9],[4,8],[8,9],[7,5]];
+/* Shuffle ring slots once per page load so reveal order ≠ clockwise order.
+   personSlot[i] = which RING_POS index the i-th person in revealOrder occupies. */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+const personSlot = shuffle([0,1,2,3,4,5,6,7,8,9]);
+// posOf(revealOrderIdx) → {x,y}
+function posOf(i) { return RING_POS[personSlot[i]]; }
+
+/* Finale connection pairs — group-specific connections (by revealOrder index) */
+const FINALE_GROUP_PAIRS = [[5,6],[5,8],[6,8],[4,9],[4,8],[8,9],[7,5]];
 
 /* ═══════════════════════════════════════════════════════
    STATE
@@ -795,7 +808,7 @@ function buildNameRing() {
   nodeEls.length = 0;
   revealOrder.forEach((id, i) => {
     const person = PEOPLE.find(p => p.id === id);
-    const pos = RING_POS[i];
+    const pos = posOf(i);
     const node = document.createElement('div');
     node.className = 'name-node quiet';
     node.dataset.id = id;
@@ -811,7 +824,7 @@ function buildFinaleRing() {
   finaleNameRing.innerHTML = '';
   revealOrder.forEach((id, i) => {
     const person = PEOPLE.find(p => p.id === id);
-    const pos = RING_POS[i];
+    const pos = posOf(i);
     const node = document.createElement('div');
     node.className = 'name-node';
     node.style.cssText = `position:absolute;transform:translate(-50%,-50%);left:${pos.x}px;top:${pos.y}px;text-align:center;`;
@@ -843,7 +856,7 @@ function clearRevealTimers() { revealTimers.forEach(clearTimeout); revealTimers 
    then lands on the right person who grows into the glow. */
 function playRevealSequence(activeIdx) {
   clearRevealTimers();
-  const pos = RING_POS[activeIdx];
+  const pos = posOf(activeIdx);
 
   if (prefersReduced()) {
     applyNodeStates(activeIdx);
@@ -924,9 +937,9 @@ function drawConnectionLines(fromIdx, toIndices) {
   // Remove old connection lines
   linesSvg.querySelectorAll('.conn-line').forEach(el => el.remove());
 
-  const fromPos = RING_POS[fromIdx];
+  const fromPos = posOf(fromIdx);
   toIndices.forEach((toIdx, i) => {
-    const toPos = RING_POS[toIdx];
+    const toPos = posOf(toIdx);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', makePathD(fromPos.x, fromPos.y, toPos.x, toPos.y));
     path.setAttribute('stroke-dasharray', '1000');
@@ -1141,7 +1154,7 @@ function renderCurrent() {
       applyConnectionHighlights(ringIdx, allToIndices);
 
       // Draw lines from current to all connected
-      const pos = RING_POS[ringIdx];
+      const pos = posOf(ringIdx);
       moveSpotlight(pos.x, pos.y, true);
       drawConnectionLines(ringIdx, allToIndices);
     } else {
@@ -1160,22 +1173,48 @@ function renderFinale() {
   buildFinaleRing();
   finaleLinesSvg.innerHTML = '';
 
-  FINALE_PAIRS.forEach(([a, b], i) => {
-    const pa = RING_POS[a], pb = RING_POS[b];
+  // 1) Backbone ring — connects every person in ring-slot order (very faint),
+  //    so no one is left as an isolated node in the constellation.
+  const ringOrder = Array.from({length: 10}, (_, i) => i)
+    .sort((a, b) => personSlot[a] - personSlot[b]); // sort by physical slot
+  for (let k = 0; k < ringOrder.length; k++) {
+    const a = ringOrder[k], b = ringOrder[(k + 1) % ringOrder.length];
+    const pa = posOf(a), pb = posOf(b);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', makePathD(pa.x, pa.y, pb.x, pb.y));
     path.setAttribute('stroke', 'var(--link)');
-    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    const len = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+    path.setAttribute('stroke-dasharray', len);
+    path.setAttribute('stroke-dashoffset', len);
+    path.style.opacity = '0';
+    finaleLinesSvg.appendChild(path);
+    setTimeout(() => {
+      path.style.opacity = '0.18';
+      path.style.transition = `stroke-dashoffset 0.7s ease, opacity 0.5s ease`;
+      path.setAttribute('stroke-dashoffset', '0');
+    }, k * 80 + 200);
+  }
+
+  // 2) Group connections — drawn on top, brighter, after the backbone settles.
+  const groupDelay = ringOrder.length * 80 + 600;
+  FINALE_GROUP_PAIRS.forEach(([a, b], i) => {
+    const pa = posOf(a), pb = posOf(b);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', makePathD(pa.x, pa.y, pb.x, pb.y));
+    path.setAttribute('stroke', 'var(--link)');
+    path.setAttribute('stroke-width', '3');
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke-dasharray', '1000');
     path.setAttribute('stroke-dashoffset', '1000');
     path.style.opacity = '0';
     finaleLinesSvg.appendChild(path);
     setTimeout(() => {
-      path.style.opacity = '0.6';
+      path.style.opacity = '0.75';
       path.style.transition = 'stroke-dashoffset 0.9s ease';
       path.style.strokeDashoffset = '0';
-    }, i * 120 + 300);
+    }, groupDelay + i * 120);
   });
 }
 
